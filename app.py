@@ -1,8 +1,9 @@
-# app.py
 from flask import Flask, request, jsonify, render_template
 from scraper import scrape_profile
 from transformer_module import evaluate_with_transformer
 from random_forest_module import predict_with_rf
+import mysql.connector
+import json
 
 app = Flask(__name__)
 
@@ -13,6 +14,66 @@ def safe_int(val):
     except Exception:
         return 0
 
+def save_result_to_db(result):
+    try:
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",  # default XAMPP password is empty, update if you set one
+            database="insta_evaluation"
+        )
+        cursor = conn.cursor()
+
+        insert_query = """
+        INSERT INTO profile_evaluations
+        (username, ai_score, ai_reasoning, random_forest_prediction, scraped_data)
+        VALUES (%s, %s, %s, %s, %s)
+        """
+        cursor.execute(insert_query, (
+            result["username"],
+            result["ai_score"],
+            result["ai_reasoning"],
+            result["random_forest_prediction"],
+            json.dumps(result["scraped_data"])
+        ))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print(f"Error saving to DB: {e}")
+
+def get_result_from_db(username):
+    try:
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="",  # your MySQL password if any
+            database="insta_evaluation"
+        )
+        cursor = conn.cursor(dictionary=True)  # fetch results as dict
+
+        query = """
+        SELECT * FROM profile_evaluations 
+        WHERE username = %s 
+        ORDER BY evaluated_at DESC 
+        LIMIT 1
+        """
+        cursor.execute(query, (username,))
+        row = cursor.fetchone()
+
+        cursor.close()
+        conn.close()
+
+        if row:
+            # Convert JSON string back to dict
+            row["scraped_data"] = json.loads(row["scraped_data"])
+            return row
+        else:
+            return None
+    except Exception as e:
+        print(f"Error fetching from DB: {e}")
+        return None
+
 @app.route("/", methods=["GET", "POST"])
 def home():
     if request.method == "POST":
@@ -20,10 +81,22 @@ def home():
         if not username:
             return render_template("index.html", error="Please enter a username")
 
-        # Step 1: Scrape Instagram profile data (login=True if needed)
+        # 1) Check if username exists in DB
+        saved_result = get_result_from_db(username)
+        if saved_result:
+            # Found in DB, prepare to show directly
+            result = {
+                "username": saved_result["username"],
+                "ai_score": saved_result["ai_score"],
+                "ai_reasoning": saved_result["ai_reasoning"],
+                "random_forest_prediction": saved_result["random_forest_prediction"],
+                "scraped_data": saved_result["scraped_data"],
+            }
+            return render_template("index.html", result=result)
+
+        # 2) Not found, scrape and evaluate
         scraped_data = scrape_profile(username, login=True)
 
-        # Prepare a simplified profile dict for transformer (adjust keys as needed)
         profile_for_ai = {
             "username": scraped_data.get("username"),
             "bio": scraped_data.get("bio"),
@@ -34,14 +107,11 @@ def home():
             "is_private": scraped_data.get("is_private")
         }
 
-        # Step 2: Get AI score + reasoning from transformer module
         ai_result = evaluate_with_transformer(profile_for_ai)
-        ai_score = ai_result.get("ai_score", 50)  # default fallback
+        ai_score = ai_result.get("ai_score", 50)  # fallback
 
-        # Step 4: Predict Fake or Genuine using Random Forest module
         rf_prediction = predict_with_rf(ai_score, scraped_data)
 
-        # Prepare result dict
         result = {
             "username": username,
             "ai_score": ai_score,
@@ -50,7 +120,9 @@ def home():
             "scraped_data": scraped_data,
         }
 
-        return render_template("result.html", result=result)
+        save_result_to_db(result)
+
+        return render_template("index.html", result=result)
 
     return render_template("index.html")
 
@@ -62,6 +134,7 @@ def api_evaluate():
     if not username:
         return jsonify({"error": "username required"}), 400
 
+    # For API, you can also check DB similarly if you want caching
     scraped_data = scrape_profile(username, login=True)
 
     profile_for_ai = {
@@ -77,14 +150,7 @@ def api_evaluate():
     ai_result = evaluate_with_transformer(profile_for_ai)
     ai_score = ai_result.get("ai_score", 50)
 
-    ocr_data = {
-        "name": username,
-        "posts": safe_int(scraped_data.get("posts_count")),
-        "followers": safe_int(scraped_data.get("followers_count")),
-        "following": safe_int(scraped_data.get("following_count")),
-    }
-
-    rf_prediction = predict_with_rf(ai_score, ocr_data, scraped_data)
+    rf_prediction = predict_with_rf(ai_score, scraped_data)
 
     return jsonify({
         "username": username,
