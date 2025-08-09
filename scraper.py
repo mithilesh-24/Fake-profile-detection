@@ -66,6 +66,9 @@ def scrape_profile(username, login=False):
         "username": username,
         "is_private": None,
         "bio": "",
+        "posts_count": None,
+        "followers_count": None,
+        "following_count": None,
         "captions": [],
         "hashtags": [],
         "mentions": [],
@@ -87,6 +90,18 @@ def scrape_profile(username, login=False):
         time.sleep(5)
 
         page_source = driver.page_source
+
+        # Scrape posts, followers, following counts (available for both public and private)
+        try:
+            counts = driver.find_elements(By.CSS_SELECTOR, "header section ul li span span")
+            if len(counts) >= 3:
+                profile_data["posts_count"] = counts[0].get_attribute("title") or counts[0].text
+                profile_data["followers_count"] = counts[1].get_attribute("title") or counts[1].text
+                profile_data["following_count"] = counts[2].text
+        except:
+            profile_data["posts_count"] = None
+            profile_data["followers_count"] = None
+            profile_data["following_count"] = None
 
         # Detect private account
         if "This Account is Private" in page_source:
