@@ -38,14 +38,6 @@ def home():
         ai_result = evaluate_with_transformer(profile_for_ai)
         ai_score = ai_result.get("ai_score", 50)  # default fallback
 
-        # Step 3: Prepare dummy OCR data for RF model
-        ocr_data = {
-            "name": username,  # Placeholder, as you don't have OCR here
-            "posts": safe_int(scraped_data.get("posts_count")),
-            "followers": safe_int(scraped_data.get("followers_count")),
-            "following": safe_int(scraped_data.get("following_count")),
-        }
-
         # Step 4: Predict Fake or Genuine using Random Forest module
         rf_prediction = predict_with_rf(ai_score, scraped_data)
 
