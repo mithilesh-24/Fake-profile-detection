@@ -95,7 +95,7 @@ def home():
             rf_pred = rf_map.get(rf_prediction_str, 0)
 
             combined_score = 0.7 * ((ai_score) /100) + 0.3 * rf_pred
-            final_label = "Mostly Genuine" if combined_score >= 0.4 else "Mostly Fake"
+            final_label = "Mostly Genuine" if combined_score >= 0.5 else "Mostly Fake"
             print(f"Using cached result for {username}: AI Score: {ai_score}, RF Prediction: {rf_prediction_str}")
             result = {
                 "username": saved_result["username"],
@@ -126,7 +126,7 @@ def home():
         rf_pred = rf_map.get(rf_prediction, 0)  # map to 0 or 1 safely
 
         combined_score = 0.7 * ((ai_score) /100) + 0.3 * rf_pred
-        final_label = "Mostly Genuine" if combined_score >= 0.4 else "Mostly Fake"
+        final_label = "Mostly Genuine" if combined_score >= 0.5 else "Mostly Fake"
 
         result = {
             "username": username,
@@ -174,7 +174,7 @@ def api_evaluate():
     rf_pred = rf_map.get(rf_prediction, 0)
     print(f"AI Score: {ai_score}, RF Prediction: {rf_prediction}")
     combined_score =  1*(ai_score / 100) + 0.3 * rf_pred
-    final_label = "Mostly Genuine" if combined_score >= 0.3 else "Mostly Fake"
+    final_label = "Mostly Genuine" if combined_score >= 0.5 else "Mostly Fake"
 
     return jsonify({
         "username": username,
