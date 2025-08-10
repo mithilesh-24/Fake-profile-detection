@@ -1,3 +1,4 @@
+import time
 from flask import Flask, request, jsonify, render_template
 from scraper import scrape_profile
 from transformer_module import evaluate_with_transformer
@@ -77,22 +78,33 @@ def get_result_from_db(username):
 @app.route("/", methods=["GET", "POST"])
 def home():
     if request.method == "POST":
+        start_time = time.time()
+    if request.method == "POST":
         username = request.form.get("username")
         if not username:
             return render_template("index.html", error="Please enter a username")
 
+        # Map RF string label to numeric value
+        rf_map = {"Fake": 0, "Genuine": 1, "Mostly Fake": 0, "Mostly Genuine": 1}
+
         # 1) Check if username exists in DB
         saved_result = get_result_from_db(username)
         if saved_result:
-            # Found in DB, prepare to show directly
+            ai_score = float(saved_result["ai_score"])
+            rf_prediction_str = saved_result["random_forest_prediction"]
+            rf_pred = rf_map.get(rf_prediction_str, 0)
+
+            combined_score = 0.8 * (ai_score / 100) + 0.3 * rf_pred
+            final_label = "Mostly Genuine" if combined_score >= 0.2 else "Mostly Fake"
+            print(f"Using cached result for {username}: AI Score: {ai_score}, RF Prediction: {rf_prediction_str}")
             result = {
                 "username": saved_result["username"],
-                "ai_score": saved_result["ai_score"],
-                "ai_reasoning": saved_result["ai_reasoning"],
-                "random_forest_prediction": saved_result["random_forest_prediction"],
-                "scraped_data": saved_result["scraped_data"],
+                "final_label": final_label,
             }
-            return render_template("index.html", result=result)
+            elapsed = time.time() - start_time
+            if elapsed < 5:
+                time.sleep(5 - elapsed)
+            return render_template("index.html", result=result, scroll_to="result")
 
         # 2) Not found, scrape and evaluate
         scraped_data = scrape_profile(username, login=True)
@@ -108,23 +120,31 @@ def home():
         }
 
         ai_result = evaluate_with_transformer(profile_for_ai)
-        ai_score = ai_result.get("ai_score", 50)  # fallback
+        ai_score = float(ai_result.get("ai_score", 50))  # ensure float
 
-        rf_prediction = predict_with_rf(ai_score, scraped_data)
+        rf_prediction = predict_with_rf(ai_score, scraped_data)  # returns string label
+        rf_pred = rf_map.get(rf_prediction, 0)  # map to 0 or 1 safely
+
+        combined_score = 0.7 * (ai_score * 100) + 0.3 * rf_pred
+        final_label = "Mostly Genuine" if combined_score >= 0.5 else "Mostly Fake"
 
         result = {
+            "username": username,
+            "final_label": final_label,
+        }
+
+        # Save raw data and predictions for reference
+        save_result_to_db({
             "username": username,
             "ai_score": ai_score,
             "ai_reasoning": ai_result.get("reasoning", ""),
             "random_forest_prediction": rf_prediction,
             "scraped_data": scraped_data,
-        }
+        })
 
-        save_result_to_db(result)
+        return render_template("index.html", result=result, scroll_to="result")
 
-        return render_template("index.html", result=result)
-
-    return render_template("index.html")
+    return render_template("index.html",result=None, scroll_to=None)
 
 
 @app.route("/api/evaluate", methods=["POST"])
@@ -134,7 +154,8 @@ def api_evaluate():
     if not username:
         return jsonify({"error": "username required"}), 400
 
-    # For API, you can also check DB similarly if you want caching
+    rf_map = {"Fake": 0, "Genuine": 1, "Mostly Fake": 0, "Mostly Genuine": 1}
+
     scraped_data = scrape_profile(username, login=True)
 
     profile_for_ai = {
@@ -148,16 +169,16 @@ def api_evaluate():
     }
 
     ai_result = evaluate_with_transformer(profile_for_ai)
-    ai_score = ai_result.get("ai_score", 50)
-
+    ai_score = float(ai_result.get("ai_score", 50))
     rf_prediction = predict_with_rf(ai_score, scraped_data)
+    rf_pred = rf_map.get(rf_prediction, 0)
+    print(f"AI Score: {ai_score}, RF Prediction: {rf_prediction}")
+    combined_score =  1*(ai_score / 100) + 0.3 * rf_pred
+    final_label = "Mostly Genuine" if combined_score >= 0.3 else "Mostly Fake"
 
     return jsonify({
         "username": username,
-        "ai_score": ai_score,
-        "ai_reasoning": ai_result.get("reasoning", ""),
-        "random_forest_prediction": rf_prediction,
-        "scraped_data": scraped_data,
+        "final_label": final_label,
     })
 
 

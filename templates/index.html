@@ -1,31 +1,249 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <title>Instagram Profile Evaluation</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VerifyGram — Instagram Fake Profile Detection</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-  <h1>Instagram Profile Credibility Checker</h1>
+  <header class="site-header">
+    <div class="container nav-row">
+      <div class="logo">Verify<span class="brand-accent">Gram</span>.com</div>
+      <button id="nav-toggle" aria-label="Open menu" class="nav-toggle">
+        <span class="hamburger"></span>
+      </button>
+      <nav id="nav" class="nav">
+        <a href="#home" class="nav-link">Home</a>
+        <a href="#about" class="nav-link">About</a>
+        <a href="#how" class="nav-link">How It Works</a>
+        <a href="#contact" class="nav-link cta">Contact</a>
+      </nav>
+    </div>
+  </header>
 
-  {% if error %}
-    <p style="color:red;">{{ error }}</p>
-  {% endif %}
+  <main>
+    <section id="home" class="hero">
+      <div class="container hero-grid">
+        <div class="hero-content">
+          <h1 style="color: #0b76ff">Detect Fake Instagram Profiles</h1>
+          <p class="lead">VerifyGram combines behavioral analysis, AI-powered risk scoring, and profile verification to identify suspicious accounts and protect your brand and community.</p>
+          <div class="hero-actions">
+            <a href="#how" class="btn primary" >See How It Works</a>
+            <a href="#contact" class="btn ghost" >Get In Touch</a>
+          </div>
 
-  {% if result %}
-    <h2>Results for {{ result.username }}</h2>
-    <p><strong>AI Score:</strong> {{ result.ai_score }}</p>
-    <p><strong>AI Reasoning:</strong> {{ result.ai_reasoning }}</p>
-    <p><strong>Random Forest Prediction:</strong> {{ result.random_forest_prediction }}</p>
+          <ul class="key-stats">
+            <li>
+              <strong>AI Scoring</strong>
+              <span>Behavior + Content</span>
+            </li>
+            <li>
+              <strong>Real-time</strong>
+              <span>Fast Analysis</span>
+            </li>
+            <li>
+              <strong>Actionable</strong>
+              <span>Reports & Insights</span>
+            </li>
+          </ul>
+        </div>
 
-    <h3>Scraped Data</h3>
-    <pre>{{ result.scraped_data | tojson(indent=2) }}</pre>
+        <div class="hero-visual" aria-hidden="true">
+          <!-- Inline SVG illustration to avoid external assets -->
+          <svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg" role="img" class="illustration">
+            <defs>
+              <linearGradient id="g1" x1="0" x2="1">
+                <stop offset="0" stop-color="#0b76ff" stop-opacity="0.95" />
+                <stop offset="1" stop-color="#3ac3ff" />
+              </linearGradient>
+            </defs>
+            <rect x="0" y="0" width="100%" height="100%" rx="16" fill="#f6f9ff" />
+            <g transform="translate(40,40)">
+              <rect x="0" y="0" width="320" height="220" rx="12" fill="url(#g1)" opacity="0.12" />
+              <g transform="translate(16,16)">
+                <rect x="0" y="0" width="120" height="120" rx="8" fill="#fff" stroke="#e6eefc" />
+                <rect x="136" y="0" width="160" height="34" rx="6" fill="#fff" stroke="#e6eefc" />
+                <rect x="136" y="46" width="160" height="14" rx="6" fill="#fff" stroke="#e6eefc" />
+                <rect x="136" y="70" width="160" height="14" rx="6" fill="#fff" stroke="#e6eefc" />
+                <circle cx="60" cy="60" r="28" fill="#0b76ff" opacity="0.14" />
 
-    <a href="/">Check another username</a>
-  {% else %}
-    <form method="post">
-      <label>Instagram Username:</label><br>
-      <input type="text" name="username" required><br><br>
-      <button type="submit">Evaluate</button>
-    </form>
-  {% endif %}
+                <!-- magnifier / detection icon -->
+                <g transform="translate(40,160)">
+                  <circle cx="24" cy="24" r="24" fill="#fff" stroke="#e6eefc" />
+                  <path d="M38 38 L60 60" stroke="#bcd9ff" stroke-width="4" stroke-linecap="round" />
+                </g>
+              </g>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </section>
+    <section id="evaluate" class="section evaluate">
+      <div class="container">
+        <h2 style="color: #0b76ff">Enter Instagram Username :-</h2>
+        <div id="result">
+          <!-- Static form -->
+          <form method="POST" id="usernameForm">
+              <input type="text" name="username" required placeholder="Enter username">
+              <button type="submit">Evaluate</button>
+          </form>
+
+          <div id="loading" style="display:none;">
+              <img src="{{ url_for('static', filename='loading.gif') }}" alt="Loading..." width="50">
+              <p>Evaluating, please wait...</p>
+          </div>
+
+          <script>
+          document.getElementById("usernameForm").addEventListener("submit", function() {
+              document.getElementById("loading").style.display = "block";
+          });
+          </script>
+          <hr style="margin: 24px 0;">
+
+          {% if error %}
+            <p style="color:red;">{{ error }}</p>
+          {% endif %}
+
+          {% if result %}
+            <h3>Results for <em>{{ result.username }}</em></h3>
+            <p><strong>Status:</strong> {{ result.final_label }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+    <section id="about" class="section about">
+      <div class="container">
+        <div class="about-box">
+        <div class="about-grid">
+        <h2 style="color: #0b76ff">About Fake Profile Detection</h2>
+        <p class="muted">Fake and automated accounts on Instagram skew engagement metrics, spread misinformation, and can damage reputation. Detecting them early helps protect businesses, influencers, and communities.</p>
+
+    <div>
+      <h3 style="color: #0b76ff">Why It Matters</h3>
+      <p>Brands rely on authentic engagement to make decisions...</p>
+    </div>
+    <div>
+      <h3 style="color: #0b76ff">Detection Methods</h3>
+      <ul>
+        <li><strong>Behavioral analysis:</strong> Posting cadence...</li><br>
+        <li><strong>Content signals:</strong> Reused captions...</li><br>
+        <li><strong>Network analysis:</strong> Clusters of accounts...</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+    </section>
+
+<section id="how" class="section how-it-works">
+  <div class="container">
+    <div class="how-box">
+      <div class="steps-grid">
+    <h2 class="section-title">How It Works</h2>
+        <div class="step">
+          <h4>Step 1: Data Collection</h4>
+          <p>Our system gathers profile data, posts, and engagement metrics from Instagram’s public API.</p>
+        </div>
+        <div class="step">
+          <h4>Step 2: AI Analysis</h4>
+          <p>Machine learning algorithms analyze posting behavior, content similarity, and audience patterns.</p>
+        </div>
+        <div class="step">
+          <h4>Step 3: Risk Scoring</h4>
+          <p>Each profile receives a trust score indicating the likelihood of being fake.</p>
+        </div>
+        <div class="step">
+          <h4>Step 4: Report Generation</h4>
+          <p>A clear report highlights suspicious indicators and provides recommendations for action.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+    <section id="features" class="section features">
+  <div class="container">
+    <div class="features-box">
+      <h2 class="section-title">Features</h2>
+      <div class="feature-card">
+        <h3>AI-Powered Detection</h3>
+        <p>Advanced algorithms analyze patterns in posting behavior, engagement, and network activity to identify suspicious accounts.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Engagement Pattern Analysis</h3>
+        <p>Detect unusual spikes or drops in likes, comments, and follows that may indicate automation or bot activity.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Profile Verification Insights</h3>
+        <p>Identify incomplete or misleading profile details, duplicated images, and fake profile pictures using image analysis.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+    <section id="contact" class="section contact">
+      <div class="container contact-grid">
+        <div>
+          <h2>Contact Us</h2>
+          <p class="muted">Have questions, a demo request, or want to try a free scan? Send us a message and we'll respond within 2 business days.</p>
+
+          <ul class="contact-info">
+            <li>📧<a href="mailto:mithileshbr.24cse@kongu.edu.com" class="email"> support@verifygram.com</a></li>
+          </ul>
+        </div>
+
+        <form id="contact-form" class="contact-form" novalidate>
+          <label for="name">Name</label>
+          <input type="text" id="name" name="name" required>
+
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required>
+
+          <label for="message">Message</label>
+          <textarea id="message" name="message" rows="5" required></textarea>
+
+          <div class="form-row">
+            <button type="submit" class="btn primary">Send Message</button>
+            <div id="form-status" class="form-status" aria-live="polite"></div>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <div class="logo small">Insta<span class="brand-accent">Guard</span></div>
+        <p class="muted">Protecting authenticity across social platforms.</p>
+      </div>
+
+      <div class="footer-links">
+        <a href="#about">About</a>
+        <a href="#how">How It Works</a>
+        <a href="#contact">Contact</a>
+      </div>
+
+      <div class="socials">
+        <a href="#" aria-label="Twitter">🐦</a>
+        <a href="#" aria-label="LinkedIn">🔗</a>
+        <a href="#" aria-label="GitHub">💻</a>
+      </div>
+    </div>
+
+    <div class="container copyright">
+      <small>© <span id="year"></span> VerifyGram — All rights reserved.</small>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
 </body>
 </html>
+{% if scroll_to %}
+<script>
+    window.location.hash = "#{{ scroll_to }}";
+</script>
+{% endif %}
