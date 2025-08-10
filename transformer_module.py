@@ -5,7 +5,7 @@ import re
 from dotenv import load_dotenv
 
 load_dotenv()
-genai.configure(api_key="AIzaSyBkT_u1rTrpFk5DyFiTCOqv3o3kBgKbSZk")  
+genai.configure(api_key="AIzaSyBkT_u1rTrpFk5DyFiTCOqv3o3kBgKbSZk")  # Make sure API key is in .env
 
 def extract_json_from_text(text):
     """Extract JSON object from string using regex."""
@@ -51,12 +51,15 @@ def evaluate_with_transformer(profile_data):
     contact_info = detect_contact_details(bio_text)
     business_related = is_business_bio(bio_text, contact_info)
 
-    # Select prompt type
+    # Decide profile type & strictness
     if business_related:
         profile_type = "fake business account"
+        strictness_note = "Be STRICT when evaluating business accounts — scams and impersonations are common."
     else:
         profile_type = "general fake account"
+        strictness_note = "Be LENIENT for personal accounts — give the benefit of doubt unless strong red flags."
 
+    # Create tailored prompt
     if is_private:
         prompt = f"""
 You are an expert investigator specialized in detecting **fake Instagram profiles**.
@@ -71,8 +74,14 @@ Given the Instagram account data below:
   "possible_profile_type": "{profile_type}"
 }}
 
-Evaluate the likelihood that this account is a **{profile_type}** by considering the available data.
-Provide a credibility score **0 (definitely fake) to 100 (definitely genuine)** and a detailed explanation.
+{strictness_note}
+
+Guidelines:
+- If **business account** → Be strict and score lower if there are red flags (spam claims, scam keywords, suspicious contact info).
+- If **personal account** → Be lenient unless there is strong evidence of impersonation or bot behavior.
+- Do NOT punish accounts just for being private.
+
+Give a credibility score **0 (definitely fake) to 100 (definitely genuine)** and a short reasoning.
 
 Respond ONLY with:
 
@@ -92,14 +101,14 @@ Given the Instagram account data below:
 Detected contact info from bio: {json.dumps(contact_info)}
 Possible profile type: {profile_type}
 
-Evaluate the likelihood that this account is a **{profile_type}** by considering:
+{strictness_note}
 
-- Bio content and realism
-- Consistency between posts, captions, followers
-- Engagement quality
-- Signs of spam, impersonation, or scams
+Guidelines:
+- If **business account** → Be strict and score lower if there are red flags (spam claims, scam keywords, suspicious contact info).
+- If **personal account** → Be lenient unless there is strong evidence of impersonation or bot behavior.
+- Do NOT punish accounts just for low followers or few posts.
 
-Provide a credibility score **0 (definitely fake) to 100 (definitely genuine)** and a detailed explanation.
+Give a credibility score **0 (definitely fake) to 100 (definitely genuine)** and a short reasoning.
 
 Respond ONLY with:
 
@@ -109,14 +118,25 @@ Respond ONLY with:
 }}
 """
 
+    # AI Response
     response = model.generate_content(prompt)
     print("Raw AI response:", response.text)
 
+    # Try parsing
     try:
-        return json.loads(response.text)
-    except Exception as e:
-        extracted = extract_json_from_text(response.text)
-        if extracted is not None:
-            return extracted
-        print(f"JSON parsing error: {e}")
+        result = json.loads(response.text)
+    except Exception:
+        result = extract_json_from_text(response.text)
+
+    if not result:
         return {"ai_score": 50, "reasoning": "Unable to evaluate"}
+
+    # Apply bias adjustment
+    score = result.get("ai_score", 50)
+    if business_related:
+        score = max(0, score - 15)  # More strict for business
+    else:
+        score = min(100, score + 10)  # More lenient for personal
+
+    result["ai_score"] = score
+    return result
