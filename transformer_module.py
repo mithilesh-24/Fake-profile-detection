@@ -5,83 +5,108 @@ import re
 from dotenv import load_dotenv
 
 load_dotenv()
-genai.configure(api_key="AIzaSyBkT_u1rTrpFk5DyFiTCOqv3o3kBgKbSZk")  # Use your .env API key securely
+genai.configure(api_key="AIzaSyBkT_u1rTrpFk5DyFiTCOqv3o3kBgKbSZk")  
 
 def extract_json_from_text(text):
-    """
-    Attempt to extract JSON object from a string using regex.
-    """
+    """Extract JSON object from string using regex."""
     try:
         json_str = re.search(r"\{.*\}", text, re.DOTALL).group()
         return json.loads(json_str)
     except Exception:
         return None
 
+def detect_contact_details(bio):
+    """Detect emails, phone numbers, and WhatsApp links in a bio."""
+    email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+    phone_pattern = r"\+?\d[\d\s\-]{7,}\d"
+    whatsapp_pattern = r"(?:wa\.me|whatsapp\.com|whatsapp)"
+
+    return {
+        "emails_found": re.findall(email_pattern, bio),
+        "phones_found": re.findall(phone_pattern, bio),
+        "whatsapp_found": bool(re.search(whatsapp_pattern, bio, re.IGNORECASE))
+    }
+
+def is_business_bio(bio, contact_info):
+    """Check if bio is business-related based on keywords or contact info."""
+    business_keywords = [
+        "dm for business", "order now", "shop", "store", "brand",
+        "ceo", "founder", "official", "booking", "inquiries",
+        "business", "buy now", "offer", "discount", "wholesale"
+    ]
+    bio_lower = bio.lower()
+
+    if any(word in bio_lower for word in business_keywords):
+        return True
+    if contact_info["emails_found"] or contact_info["phones_found"] or contact_info["whatsapp_found"]:
+        return True
+    return False
+
 def evaluate_with_transformer(profile_data):
     model = genai.GenerativeModel("gemini-1.5-flash")
     is_private = profile_data.get("is_private", False)
 
+    # Detect contact info & business indicators
+    bio_text = profile_data.get("bio", "")
+    contact_info = detect_contact_details(bio_text)
+    business_related = is_business_bio(bio_text, contact_info)
+
+    # Select prompt type
+    if business_related:
+        profile_type = "fake business account"
+    else:
+        profile_type = "general fake account"
+
     if is_private:
         prompt = f"""
-You are an expert assistant specialized in detecting fake Instagram profiles.
+You are an expert investigator specialized in detecting **fake Instagram profiles**.
 
 Given the Instagram account data below:
 
 {{
   "username": "{profile_data.get('username')}",
-  "bio": "{profile_data.get('bio', '')}",
-  "is_private": true
+  "bio": "{bio_text}",
+  "is_private": true,
+  "detected_contact_info": {json.dumps(contact_info)},
+  "possible_profile_type": "{profile_type}"
 }}
 
-Since this account is private and no posts or captions are accessible, evaluate the likelihood that this account is fake by carefully considering:
+Evaluate the likelihood that this account is a **{profile_type}** by considering the available data.
+Provide a credibility score **0 (definitely fake) to 100 (definitely genuine)** and a detailed explanation.
 
-- The content and tone of the bio.
-- Presence of suspicious phrases, spam-like language, or unnatural wording.
-- Any hints of impersonation or inconsistencies in the bio.
-- The fact that profile privacy alone is not a reliable indicator of fakery.
-- Avoid making assumptions based solely on lack of visible posts or followers.
-
-Provide a nuanced evaluation and a detailed explanation supporting your credibility score.
-
-Respond ONLY with a JSON object containing exactly these keys:
-
-{{
-  "ai_score": number,  // 0 (definitely fake) to 100 (definitely genuine)
-  "reasoning": string  // detailed explanation of your evaluation
-}}
-
-Do NOT include any text outside this JSON or extra formatting.
-"""
-    else:
-        prompt = f"""
-You are an expert assistant specialized in detecting fake Instagram profiles.
-
-Given the Instagram account data below, including username, bio, posts, followers, and other metadata:
-
-{json.dumps(profile_data, indent=2)}
-
-Evaluate how genuine or fake this account is by carefully considering:
-
-- The quality, authenticity, and coherence of the bio.
-- Consistency and realism of posts and captions (e.g., avoid spam, repetitive, or suspicious content).
-- Number of followers and mutual connections relative to activity.
-- Signs of automated or bot behavior.
-- Any inconsistencies, red flags, or indicators of impersonation.
-- Whether the account appears to promote scams, misinformation, or suspicious links.
-- Avoid false positives by carefully balancing red flags with realistic exceptions.
-
-Assign a credibility score between 0 (fake) and 100 (genuine).
-
-Provide a detailed reasoning supporting your score.
-
-Respond ONLY with a JSON object containing exactly these keys:
+Respond ONLY with:
 
 {{
   "ai_score": number,
   "reasoning": string
 }}
+"""
+    else:
+        prompt = f"""
+You are an expert investigator specialized in detecting **fake Instagram profiles**.
 
-Do NOT include any additional text or formatting.
+Given the Instagram account data below:
+
+{json.dumps(profile_data, indent=2)}
+
+Detected contact info from bio: {json.dumps(contact_info)}
+Possible profile type: {profile_type}
+
+Evaluate the likelihood that this account is a **{profile_type}** by considering:
+
+- Bio content and realism
+- Consistency between posts, captions, followers
+- Engagement quality
+- Signs of spam, impersonation, or scams
+
+Provide a credibility score **0 (definitely fake) to 100 (definitely genuine)** and a detailed explanation.
+
+Respond ONLY with:
+
+{{
+  "ai_score": number,
+  "reasoning": string
+}}
 """
 
     response = model.generate_content(prompt)
