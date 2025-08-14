@@ -5,7 +5,7 @@ import re
 from dotenv import load_dotenv
 
 load_dotenv()
-genai.configure(api_key="AIzaSyBkT_u1rTrpFk5DyFiTCOqv3o3kBgKbSZk")  # Make sure API key is in .env
+genai.configure(api_key="")  # Make sure API key is in .env
 
 def extract_json_from_text(text):
     """Extract JSON object from string using regex."""
