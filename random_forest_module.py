@@ -58,11 +58,11 @@ def predict_with_rf(ai_score, scraped_data):
 if __name__ == "__main__":
     dummy_ai_score = 75.0
     dummy_scraped_data = {
-        "name": "jonnysinn",
-        "posts_count": "0",
-        "followers_count": "0",
-        "following_count": "0",
-        "favourites_count": "0",
+        "name": "mithilesh",
+        "posts_count": "1",
+        "followers_count": "200",
+        "following_count": "300",
+        "favourites_count": "12",
         "bio": "the world is in my control hbcqicyuwbcyu hci3be"
     }
 

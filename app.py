@@ -126,7 +126,7 @@ def home():
         rf_pred = rf_map.get(rf_prediction, 0)  # map to 0 or 1 safely
 
         combined_score = 0.8 * ((ai_score) /100) + 0.2 * rf_pred
-        final_label = "Mostly Genuine" if combined_score >= 0.3 else "Mostly Fake"
+        final_label = "Mostly Genuine" if combined_score >= 0.4 else "Mostly Fake"
 
         result = {
             "username": username,
