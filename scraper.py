@@ -32,7 +32,7 @@ def instagram_login(driver):
     password_input.send_keys(IG_PASSWORD)
     password_input.send_keys(Keys.RETURN)
 
-    time.sleep(6)  # Wait for login to complete
+    time.sleep(2)  # Wait for login to complete
 
     # Dismiss "Save Login Info?" popup
     try:
@@ -87,7 +87,7 @@ def scrape_profile(username, login=False):
 
         # Visit profile
         driver.get(f"https://www.instagram.com/{username}/")
-        time.sleep(5)
+        time.sleep(3)
 
         page_source = driver.page_source
 
