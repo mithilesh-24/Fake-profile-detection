@@ -9,8 +9,8 @@ from dotenv import load_dotenv
 
 # Load credentials from .env file
 load_dotenv()
-IG_USERNAME = os.getenv("IG_USERNAME", "lethish_kumar_420")
-IG_PASSWORD = os.getenv("IG_PASSWORD", "geetha@21234")
+IG_USERNAME = os.getenv("IG_USERNAME", "")
+IG_PASSWORD = os.getenv("IG_PASSWORD", "")
 
 # Regex patterns
 EMAIL_REGEX = r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"
