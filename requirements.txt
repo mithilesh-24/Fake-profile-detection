@@ -1,0 +1,11 @@
+flask
+mysql-connector-python
+pandas
+numpy
+matplotlib
+scikit-learn
+gender-guesser
+joblib
+selenium
+python-dotenv
+google-generativeai
