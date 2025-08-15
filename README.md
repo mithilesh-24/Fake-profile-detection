@@ -24,10 +24,25 @@ An AI-powered Instagram profile evaluation system that detects **fake accounts**
 ---
 ---
 
-## 🚀 How to Set It Up and Run
-
+## <h2>🚀 How to Set It Up and Run</h2>
+## 1️⃣ Clone the repository
 ```bash
-git clone https://github.com/your-username/fake-profile-detection.git
+git clone https://github.com/mithilesh-24/fake-profile-detection.git
 cd fake-profile-detection
+```
+## 2️⃣Install dependencies
+```bash
 pip install -r requirements.txt
+```
+## 3️⃣Set up environment variables
+```bash
+MYSQL_HOST=localhost
+MYSQL_USER=root
+MYSQL_PASSWORD=yourpassword
+MYSQL_DB=fake_profile
+GEMINI_API_KEY=your_google_gemini_api_key
+```
+## 4️⃣Run the Flask app
+```bash
 python app.py
+```
