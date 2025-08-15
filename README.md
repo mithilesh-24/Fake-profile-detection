@@ -22,9 +22,8 @@ An AI-powered Instagram profile evaluation system that detects **fake accounts**
 ![flow chart1](https://github.com/user-attachments/assets/09a6ea4e-d89f-4ca7-a992-583a9d8c68ef)
 
 ---
----
 
-## <h2>🚀 How to Set It Up and Run</h2>
+# 🚀 How to Set It Up and Run
 ## 1️⃣ Clone the repository
 ```bash
 git clone https://github.com/mithilesh-24/fake-profile-detection.git
